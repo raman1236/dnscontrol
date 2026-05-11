@@ -113,3 +113,32 @@ func TestTxtEncode(t *testing.T) {
 		}
 	}
 }
+
+func TestEncodeSingle(t *testing.T) {
+	// EncodeSingle should render the full string as a single quoted chunk,
+	// without splitting at 255-octet boundaries (unlike EncodeQuoted).
+	long := strings.Repeat("X", 300)
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		// Short strings behave the same as EncodeQuoted
+		{"simple", `"simple"`},
+		{`a"b`, `"a\"b"`},
+		// A 300-char string must NOT be split into two chunks
+		{long, `"` + long + `"`},
+	}
+	for _, tt := range tests {
+		got := EncodeSingle(tt.input)
+		if got != tt.expected {
+			t.Errorf("EncodeSingle(%q): got %q, want %q", tt.input, got, tt.expected)
+		}
+		// Verify EncodeQuoted *would* split the 300-char string
+		if len(tt.input) == 300 {
+			chunked := EncodeQuoted(tt.input)
+			if chunked == tt.expected {
+				t.Errorf("EncodeQuoted(%d chars): expected chunked output but got single chunk", len(tt.input))
+			}
+		}
+	}
+}
